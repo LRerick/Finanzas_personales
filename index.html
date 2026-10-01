@@ -1,1 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Finanzas Personales</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <header class="topbar">
+      <div class="brand">
+        <h2>Panel Financiero</h2>
+        <span class="source-tag">data.csv</span>
+      </div>
+      <div class="actions">
+        <label for="csvFileInput" class="btn btn-outline">Importar CSV</label>
+        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        <button id="btnExport" class="btn btn-outline">Descargar data.csv</button>
+      </div>
+    </header>
 
+    <main class="content-container">
+      <!-- Tarjetas de métricas consolidadas -->
+      <section class="kpi-container">
+        <div class="kpi-card">
+          <span class="kpi-label">Ingresos Totales</span>
+          <div class="kpi-num text-success" id="kpiIngresos">S/ 0.00</div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Gastos Totales</span>
+          <div class="kpi-num text-danger" id="kpiGastos">S/ 0.00</div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Inversión y Ahorro</span>
+          <div class="kpi-num text-info" id="kpiInversiones">S/ 0.00</div>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Flujo Neto Disponible</span>
+          <div class="kpi-num" id="kpiBalance">S/ 0.00</div>
+        </div>
+      </section>
+
+      <!-- Formulario para agregar transacciones -->
+      <section class="panel">
+        <div class="panel-header">
+          <h3>Registrar Transacción</h3>
+        </div>
+        <form id="txForm" class="form-layout">
+          <div class="input-field">
+            <label for="fecha">Fecha</label>
+            <input type="date" id="fecha" required>
+          </div>
+          <div class="input-field">
+            <label for="tipo">Tipo</label>
+            <select id="tipo" required>
+              <option value="Gasto">Gasto</option>
+              <option value="Ingreso">Ingreso</option>
+              <option value="Inversion">Inversión</option>
+            </select>
+          </div>
+          <div class="input-field">
+            <label for="categoria">Categoría</label>
+            <input type="text" id="categoria" placeholder="Ej. Nómina, Supermercado, Acciones" required>
+          </div>
+          <div class="input-field">
+            <label for="descripcion">Descripción</label>
+            <input type="text" id="descripcion" placeholder="Detalle del movimiento" required>
+          </div>
+          <div class="input-field">
+            <label for="monto">Monto (S/)</label>
+            <input type="number" id="monto" step="0.01" min="0.01" placeholder="0.00" required>
+          </div>
+          <div class="input-field">
+            <label for="metodo_pago">Método de Pago</label>
+            <select id="metodo_pago" required>
+              <option value="Tarjeta Débito">Tarjeta de Débito</option>
+              <option value="Tarjeta Crédito">Tarjeta de Crédito</option>
+              <option value="Transferencia">Transferencia Bancaria</option>
+              <option value="Débito Automático">Débito Automático</option>
+              <option value="Cuenta Broker">Cuenta Broker</option>
+              <option value="Efectivo">Efectivo</option>
+            </select>
+          </div>
+          <div class="form-submit">
+            <button type="submit" class="btn btn-primary">Agregar Registro</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Tabla y filtros -->
+      <section class="panel">
+        <div class="panel-header flex-between">
+          <h3>Movimientos Registrados</h3>
+          <div class="table-filters">
+            <label for="filterTipo">Filtrar:</label>
+            <select id="filterTipo">
+              <option value="Todos">Todos</option>
+              <option value="Ingreso">Ingresos</option>
+              <option value="Gasto">Gastos</option>
+              <option value="Inversion">Inversiones</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Método de Pago</th>
+                <th>Monto</th>
+                <th>Gestión</th>
+              </tr>
+            </thead>
+            <tbody id="txTableBody">
+              <!-- Render dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
