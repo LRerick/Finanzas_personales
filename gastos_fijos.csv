@@ -1,0 +1,4 @@
+id,dia_mes,categoria,descripcion,monto,moneda,metodo_pago,activo
+1,14,Servicios,Internet Fibra Óptica 100 Mbps,70.00,PEN,Débito Automático,1
+2,20,Tarjeta de Credito,Pago mensual Tarjeta de Crédito,850.00,PEN,Banca por Internet,1
+3,25,Mantenimiento,Mantenimiento de Edificio / Arbitrios,150.00,PEN,Transferencia,1
