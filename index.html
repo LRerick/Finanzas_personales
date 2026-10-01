@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control Financiero & Calendario de Obligaciones</title>
+  <title>Control Financiero & Gastos Fijos</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,169 +13,245 @@
     <header class="topbar">
       <div class="brand">
         <h2>Control Financiero</h2>
-        <span class="source-tag">Bimoneda &bull; data.csv</span>
+        <span class="source-tag">Bimoneda &bull; Auto-Sync</span>
       </div>
       <div class="actions">
-        <label for="csvFileInput" class="btn btn-outline">Importar CSV</label>
+        <label for="csvFileInput" class="btn btn-outline">Importar data.csv</label>
         <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
-        <button id="btnExport" class="btn btn-outline">Exportar data.csv</button>
+        <button id="btnExport" class="btn btn-outline">Descargar data.csv</button>
+        <button id="btnExportFijos" class="btn btn-outline">Descargar gastos_fijos.csv</button>
       </div>
     </header>
 
+    <!-- Navegación por pestañas -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-dashboard">Dashboard & Movimientos Diarios</button>
+      <button class="tab-btn" data-tab="tab-fijos">Programación de Gastos Fijos (Mensuales)</button>
+    </nav>
+
     <main class="content-container">
-      <!-- Tarjetas KPI Bimoneda -->
-      <section class="kpi-grid">
-        <div class="kpi-card">
-          <span class="kpi-label">Ingresos Soles (PEN)</span>
-          <div class="kpi-num text-success" id="kpiIngresosPen">S/ 0.00</div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Egresos Soles (PEN)</span>
-          <div class="kpi-num text-danger" id="kpiEgresosPen">S/ 0.00</div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Flujo Neto (PEN)</span>
-          <div class="kpi-num" id="kpiNetoPen">S/ 0.00</div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Ingresos Dólares (USD)</span>
-          <div class="kpi-num text-success" id="kpiIngresosUsd">$ 0.00</div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Egresos Dólares (USD)</span>
-          <div class="kpi-num text-danger" id="kpiEgresosUsd">$ 0.00</div>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Flujo Neto (USD)</span>
-          <div class="kpi-num" id="kpiNetoUsd">$ 0.00</div>
-        </div>
-      </section>
+      
+      <!-- ================= PESTAÑA 1: DASHBOARD Y MOVIMIENTOS ================= -->
+      <div id="tab-dashboard" class="tab-content active">
+        <!-- KPIs Bimoneda -->
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Ingresos Soles (PEN)</span>
+            <div class="kpi-num text-success" id="kpiIngresosPen">S/ 0.00</div>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Egresos Soles (PEN)</span>
+            <div class="kpi-num text-danger" id="kpiEgresosPen">S/ 0.00</div>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Balance Neto (PEN)</span>
+            <div class="kpi-num" id="kpiNetoPen">S/ 0.00</div>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Ingresos Dólares (USD)</span>
+            <div class="kpi-num text-success" id="kpiIngresosUsd">$ 0.00</div>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Egresos Dólares (USD)</span>
+            <div class="kpi-num text-danger" id="kpiEgresosUsd">$ 0.00</div>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Balance Neto (USD)</span>
+            <div class="kpi-num" id="kpiNetoUsd">$ 0.00</div>
+          </div>
+        </section>
 
-      <!-- Panel: Calendario y Alerta de Obligaciones Fijas -->
-      <section class="panel obligations-panel">
-        <div class="panel-header flex-between">
-          <div>
-            <h3>Calendario de Pagos Obligatorios (Servicios / Tarjetas)</h3>
-            <p class="panel-subtitle">Compromisos de pago estrictos. Las fechas de corte y límites de tarjeta no admiten mora.</p>
+        <!-- Calendario y Compromisos Obligatorios -->
+        <section class="panel">
+          <div class="panel-header flex-between">
+            <div>
+              <h3>Calendario de Pagos Obligatorios (Servicios / Tarjetas)</h3>
+              <p class="panel-subtitle">Compromisos ineludibles calculados según fecha de corte o vencimiento.</p>
+            </div>
+            <div class="obligation-summary">
+              <span id="pendientesCountBadge" class="badge-alert">0 Pendientes</span>
+            </div>
           </div>
-          <div class="obligation-summary">
-            <span id="pendientesCountBadge" class="badge-alert">0 Pendientes</span>
+          <div class="cards-scroller" id="obligationsCardsList">
+            <!-- Tarjetas automáticas con días restantes -->
           </div>
-        </div>
-        
-        <div class="cards-scroller" id="obligationsCardsList">
-          <!-- Renderizado dinámico de tarjetas con cuenta regresiva -->
-        </div>
-      </section>
+        </section>
 
-      <!-- Panel: Formulario de Registro -->
-      <section class="panel">
-        <div class="panel-header">
-          <h3>Registrar Movimiento / Obligación</h3>
-        </div>
-        <form id="txForm" class="form-layout">
-          <div class="input-field">
-            <label for="fecha">Fecha Registro</label>
-            <input type="date" id="fecha" required>
+        <!-- Formulario: Registro Manual Tradicional -->
+        <section class="panel">
+          <div class="panel-header">
+            <h3>Registrar Movimiento Puntual</h3>
           </div>
+          <form id="txForm" class="form-layout">
+            <div class="input-field">
+              <label for="fecha">Fecha</label>
+              <input type="date" id="fecha" required>
+            </div>
+            <div class="input-field">
+              <label for="tipo">Tipo</label>
+              <select id="tipo" required>
+                <option value="Gasto">Gasto Variable</option>
+                <option value="Ingreso">Ingreso</option>
+                <option value="Inversion">Inversión</option>
+                <option value="Obligacion">Obligación Manual</option>
+              </select>
+            </div>
+            <div class="input-field">
+              <label for="moneda">Moneda</label>
+              <select id="moneda" required>
+                <option value="PEN">Soles (PEN)</option>
+                <option value="USD">Dólares (USD)</option>
+              </select>
+            </div>
+            <div class="input-field">
+              <label for="monto">Monto</label>
+              <input type="number" id="monto" step="0.01" min="0.01" placeholder="0.00" required>
+            </div>
+            <div class="input-field">
+              <label for="categoria">Categoría</label>
+              <input type="text" id="categoria" placeholder="Ej. Supermercado, Salario" required>
+            </div>
+            <div class="input-field">
+              <label for="descripcion">Descripción</label>
+              <input type="text" id="descripcion" placeholder="Detalle de la transacción" required>
+            </div>
+            <div class="input-field">
+              <label for="metodo_pago">Método de Pago</label>
+              <select id="metodo_pago" required>
+                <option value="Tarjeta Débito">Tarjeta de Débito</option>
+                <option value="Tarjeta Crédito">Tarjeta de Crédito</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Banca por Internet">Banca por Internet</option>
+                <option value="Débito Automático">Débito Automático</option>
+                <option value="Cuenta Broker">Cuenta Broker</option>
+                <option value="Efectivo">Efectivo</option>
+              </select>
+            </div>
+            <div class="input-field" id="vencimientoField" style="display: none;">
+              <label for="fecha_vencimiento">Fecha Límite</label>
+              <input type="date" id="fecha_vencimiento">
+            </div>
+            <div class="form-submit">
+              <button type="submit" class="btn btn-primary">Guardar Transacción</button>
+            </div>
+          </form>
+        </section>
 
-          <div class="input-field">
-            <label for="tipo">Tipo de Operación</label>
-            <select id="tipo" required>
-              <option value="Obligacion">Obligación Fija (Servicio / Tarjeta)</option>
-              <option value="Gasto">Gasto Variable</option>
-              <option value="Ingreso">Ingreso</option>
-              <option value="Inversion">Inversión / Ahorro</option>
-            </select>
+        <!-- Historial de Movimientos -->
+        <section class="panel">
+          <div class="panel-header flex-between">
+            <h3>Historial de Movimientos</h3>
+            <div class="filter-group">
+              <select id="filterMoneda">
+                <option value="Todos">Todas las monedas</option>
+                <option value="PEN">Soles (PEN)</option>
+                <option value="USD">Dólares (USD)</option>
+              </select>
+              <select id="filterTipo">
+                <option value="Todos">Todos los tipos</option>
+                <option value="Ingreso">Ingresos</option>
+                <option value="Gasto">Gastos</option>
+                <option value="Obligacion">Obligaciones</option>
+                <option value="Inversion">Inversiones</option>
+              </select>
+            </div>
           </div>
+          <div class="table-wrapper">
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Categoría</th>
+                  <th>Descripción</th>
+                  <th>Monto</th>
+                  <th>Método</th>
+                  <th>Vencimiento / Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="txTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
-          <div class="input-field">
-            <label for="moneda">Moneda</label>
-            <select id="moneda" required>
-              <option value="PEN">Soles (PEN)</option>
-              <option value="USD">Dólares (USD)</option>
-            </select>
+      <!-- ================= PESTAÑA 2: GASTOS FIJOS MENSUALES ================= -->
+      <div id="tab-fijos" class="tab-content">
+        <section class="panel">
+          <div class="panel-header">
+            <h3>Programar Gasto Fijo Recurrente</h3>
+            <p class="panel-subtitle">Define pagos que se vencen el mismo día de cada mes (ej. día 14 servicio de internet, día 20 tarjeta). Se generarán automáticamente.</p>
           </div>
+          <form id="fijosForm" class="form-layout">
+            <div class="input-field">
+              <label for="fijo_dia">Día de Pago (1 al 31)</label>
+              <input type="number" id="fijo_dia" min="1" max="31" placeholder="Ej. 14" required>
+            </div>
+            <div class="input-field">
+              <label for="fijo_categoria">Categoría</label>
+              <input type="text" id="fijo_categoria" placeholder="Ej. Servicios, Tarjeta de Crédito" required>
+            </div>
+            <div class="input-field">
+              <label for="fijo_descripcion">Descripción</label>
+              <input type="text" id="fijo_descripcion" placeholder="Ej. Internet 100 Mbps o Pago Mínimo Tarjeta" required>
+            </div>
+            <div class="input-field">
+              <label for="fijo_monto">Monto Fijo</label>
+              <input type="number" id="fijo_monto" step="0.01" min="0.01" placeholder="Ej. 70.00" required>
+            </div>
+            <div class="input-field">
+              <label for="fijo_moneda">Moneda</label>
+              <select id="fijo_moneda" required>
+                <option value="PEN">Soles (PEN)</option>
+                <option value="USD">Dólares (USD)</option>
+              </select>
+            </div>
+            <div class="input-field">
+              <label for="fijo_metodo">Método de Pago Preferido</label>
+              <select id="fijo_metodo" required>
+                <option value="Débito Automático">Débito Automático</option>
+                <option value="Banca por Internet">Banca por Internet</option>
+                <option value="Tarjeta Crédito">Tarjeta de Crédito</option>
+                <option value="Tarjeta Débito">Tarjeta de Débito</option>
+                <option value="Transferencia">Transferencia</option>
+              </select>
+            </div>
+            <div class="form-submit">
+              <button type="submit" class="btn btn-primary">Registrar Regla Recurrente</button>
+            </div>
+          </form>
+        </section>
 
-          <div class="input-field">
-            <label for="monto">Monto</label>
-            <input type="number" id="monto" step="0.01" min="0.01" placeholder="0.00" required>
+        <!-- Tabla de Gastos Fijos Programados -->
+        <section class="panel">
+          <div class="panel-header flex-between">
+            <h3>Gastos Fijos y Servicios Programados</h3>
+            <button id="btnSyncFijos" class="btn btn-outline" title="Aplica las reglas sobre el mes actual en el calendario">
+              ↻ Forzar Sincronización al Mes Actual
+            </button>
           </div>
+          <div class="table-wrapper">
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Regla ID</th>
+                  <th>Día del Mes</th>
+                  <th>Categoría</th>
+                  <th>Descripción</th>
+                  <th>Monto Fijo</th>
+                  <th>Método</th>
+                  <th>Estado Regla</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="fijosTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
-          <div class="input-field">
-            <label for="categoria">Categoría</label>
-            <input type="text" id="categoria" placeholder="Ej. Tarjeta de Crédito, Sedapal, Nómina" required>
-          </div>
-
-          <div class="input-field">
-            <label for="descripcion">Descripción</label>
-            <input type="text" id="descripcion" placeholder="Detalle del movimiento o compromiso" required>
-          </div>
-
-          <div class="input-field">
-            <label for="metodo_pago">Método de Pago</label>
-            <select id="metodo_pago" required>
-              <option value="Banca por Internet">Banca por Internet</option>
-              <option value="Débito Automático">Débito Automático</option>
-              <option value="Tarjeta Crédito">Tarjeta de Crédito</option>
-              <option value="Tarjeta Débito">Tarjeta de Débito</option>
-              <option value="Transferencia">Transferencia Bancaria</option>
-              <option value="Cuenta Broker">Cuenta Broker</option>
-              <option value="Efectivo">Efectivo</option>
-            </select>
-          </div>
-
-          <div class="input-field" id="vencimientoField">
-            <label for="fecha_vencimiento">Fecha Límite de Pago</label>
-            <input type="date" id="fecha_vencimiento">
-          </div>
-
-          <div class="form-submit">
-            <button type="submit" class="btn btn-primary">Registrar Movimiento</button>
-          </div>
-        </form>
-      </section>
-
-      <!-- Panel: Historial Completo -->
-      <section class="panel">
-        <div class="panel-header flex-between">
-          <h3>Historial de Movimientos</h3>
-          <div class="filter-group">
-            <select id="filterMoneda">
-              <option value="Todos">Todas las monedas</option>
-              <option value="PEN">Solo Soles (PEN)</option>
-              <option value="USD">Solo Dólares (USD)</option>
-            </select>
-            <select id="filterTipo">
-              <option value="Todos">Todos los tipos</option>
-              <option value="Obligacion">Obligaciones</option>
-              <option value="Ingreso">Ingresos</option>
-              <option value="Gasto">Gastos</option>
-              <option value="Inversion">Inversiones</option>
-            </select>
-          </div>
-        </div>
-        <div class="table-wrapper">
-          <table class="styled-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Tipo</th>
-                <th>Categoría</th>
-                <th>Descripción</th>
-                <th>Monto</th>
-                <th>Método</th>
-                <th>Vencimiento / Estado</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="txTableBody">
-              <!-- Render dinámico -->
-            </tbody>
-          </table>
-        </div>
-      </section>
     </main>
   </div>
 
