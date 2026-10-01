@@ -1,13 +1,10 @@
-const STORAGE_KEY_TX = 'finanzas_data_tx';
-const STORAGE_KEY_FIJOS = 'finanzas_data_fijos';
-
 let transactions = [];
 let fixedExpenses = [];
 
 const CSV_TX_FILE = 'data.csv';
 const CSV_FIJOS_FILE = 'gastos_fijos.csv';
 
-// Claves de persistencia en el navegador
+// Claves donde el navegador guardará tus datos
 const STORAGE_KEY_TX = 'finanzas_data_tx';
 const STORAGE_KEY_FIJOS = 'finanzas_data_fijos';
 
@@ -21,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAllData();
 });
 
-// 1. Manejo de Pestañas
+// Pestañas
 function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
   tabButtons.forEach(btn => {
@@ -50,7 +47,7 @@ function setupTabs() {
   }
 }
 
-// 2. Configurar Listeners
+// Botones y formularios
 function setupListeners() {
   document.getElementById('txForm').addEventListener('submit', handleAddTransaction);
   document.getElementById('fijosForm').addEventListener('submit', handleAddFixedExpense);
@@ -66,7 +63,7 @@ function setupListeners() {
   document.getElementById('filterMoneda').addEventListener('change', updateUI);
 }
 
-// 3. Cargar Datos (Prioriza localStorage; si está vacío, carga desde los CSV)
+// CARGA DE DATOS: Si ya están en el navegador los usa; si no, lee los CSV
 async function loadAllData() {
   const storedTx = localStorage.getItem(STORAGE_KEY_TX);
   const storedFijos = localStorage.getItem(STORAGE_KEY_FIJOS);
@@ -81,7 +78,7 @@ async function loadAllData() {
         parseTxCSV(textTx);
       }
     } catch (e) {
-      console.warn('data.csv inicial no accesible por fetch.');
+      console.warn('No se cargó data.csv inicial');
     }
   }
 
@@ -95,7 +92,7 @@ async function loadAllData() {
         parseFijosCSV(textFijos);
       }
     } catch (e) {
-      console.warn('gastos_fijos.csv inicial no accesible por fetch.');
+      console.warn('No se cargó gastos_fijos.csv inicial');
     }
   }
 
@@ -104,13 +101,13 @@ async function loadAllData() {
   updateUI();
 }
 
-// Función central para guardar los datos en memoria permanente
+// GUARDA EN EL NAVEGADOR
 function saveToStorage() {
   localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
   localStorage.setItem(STORAGE_KEY_FIJOS, JSON.stringify(fixedExpenses));
 }
 
-// Parser de data.csv
+// Parser data.csv
 function parseTxCSV(text) {
   const lines = text.trim().split('\n');
   if (lines.length <= 1) return;
@@ -139,7 +136,7 @@ function parseTxCSV(text) {
   transactions = parsed;
 }
 
-// Parser de gastos_fijos.csv
+// Parser gastos_fijos.csv
 function parseFijosCSV(text) {
   const lines = text.trim().split('\n');
   if (lines.length <= 1) return;
@@ -165,7 +162,7 @@ function parseFijosCSV(text) {
   fixedExpenses = parsed;
 }
 
-// Generación recurrente automática
+// Generación recurrente mensual
 function autoGenerateMonthlyCommitments() {
   const now = new Date();
   const year = now.getFullYear();
@@ -200,7 +197,7 @@ function autoGenerateMonthlyCommitments() {
   });
 }
 
-// Agregar Transacción Puntual
+// Agregar Transacción
 function handleAddTransaction(e) {
   e.preventDefault();
   const nextId = transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
@@ -223,7 +220,7 @@ function handleAddTransaction(e) {
   };
 
   transactions.unshift(newTx);
-  saveToStorage(); // Guarda en el navegador
+  saveToStorage(); // <-- Guarda de inmediato
   updateUI();
 
   document.getElementById('categoria').value = '';
@@ -250,7 +247,7 @@ function handleAddFixedExpense(e) {
 
   fixedExpenses.push(newFijo);
   autoGenerateMonthlyCommitments();
-  saveToStorage(); // Guarda en el navegador
+  saveToStorage(); // <-- Guarda de inmediato
   updateUI();
 
   document.getElementById('fijosForm').reset();
@@ -260,19 +257,19 @@ function togglePaymentStatus(id) {
   const item = transactions.find(t => t.id === id);
   if (!item) return;
   item.estado_pago = item.estado_pago === 'Pagado' ? 'Pendiente' : 'Pagado';
-  saveToStorage();
+  saveToStorage(); // <-- Guarda el cambio de estado
   updateUI();
 }
 
 function deleteTransaction(id) {
   transactions = transactions.filter(t => t.id !== id);
-  saveToStorage();
+  saveToStorage(); // <-- Guarda la eliminación
   updateUI();
 }
 
 function deleteFixedExpense(id) {
   fixedExpenses = fixedExpenses.filter(f => f.id !== id);
-  saveToStorage();
+  saveToStorage(); // <-- Guarda la eliminación
   updateUI();
 }
 
@@ -346,7 +343,6 @@ function getDaysRemaining(targetDateStr) {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
-// 4. Renderizado
 function updateUI() {
   renderKPIs();
   renderObligations();
