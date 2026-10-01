@@ -64,23 +64,60 @@ body {
 
 .actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
+}
+
+/* Tabs */
+.tabs-nav {
+  display: flex;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  gap: 1rem;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  padding: 0.9rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-content {
+  display: none;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tab-content.active {
+  display: flex;
 }
 
 .content-container {
   max-width: 1280px;
-  margin: 2rem auto;
+  margin: 1.5rem auto;
   padding: 0 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
   width: 100%;
 }
 
 /* KPIs */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
   gap: 1rem;
 }
 
@@ -98,15 +135,13 @@ body {
 }
 
 .kpi-num {
-  font-size: 1.45rem;
+  font-size: 1.4rem;
   font-weight: 700;
   margin-top: 0.35rem;
 }
 
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
-.text-warning { color: var(--warning); }
-.text-info { color: var(--info); }
 
 /* Paneles */
 .panel {
@@ -144,7 +179,7 @@ body {
   font-size: 0.75rem;
 }
 
-/* Tarjetas de Obligaciones / Calendario */
+/* Tarjetas de Obligaciones */
 .cards-scroller {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -256,7 +291,7 @@ input:focus, select:focus {
 }
 
 .btn {
-  padding: 0.65rem 1.2rem;
+  padding: 0.65rem 1.1rem;
   font-size: 0.85rem;
   font-weight: 600;
   border-radius: 6px;
