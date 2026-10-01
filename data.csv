@@ -1,10 +1,7 @@
 id,fecha,tipo,categoria,descripcion,monto,moneda,metodo_pago,es_obligatorio,fecha_vencimiento,estado_pago
 1,2026-09-01,Ingreso,Salario,Sueldo mensual neto,5500.00,PEN,Transferencia,0,,
 2,2026-09-04,Gasto,Alimentacion,Supermercado quincenal,480.00,PEN,Tarjeta Débito,0,,
-3,2026-09-10,Inversion,Portafolio Acciones,Inversión fondo indexado S&P 500,350.00,USD,Cuenta Broker,0,,
-4,2026-09-15,Obligacion,Servicios,Luz del Sur y Sedapal,260.00,PEN,Débito Automático,1,2026-10-15,Pendiente
-5,2026-09-20,Obligacion,Tarjeta de Credito,Pago mensual tarjeta (fecha límite),850.00,PEN,Banca por Internet,1,2026-10-20,Pendiente
+3,2026-09-10,Inversion,Portafolio Acciones,ETF S&P 500,350.00,USD,Cuenta Broker,0,,
+4,2026-09-14,Obligacion,Servicios (Internet),Fibra óptica recurrente,70.00,PEN,Débito Automático,1,2026-10-14,Pendiente
+5,2026-09-20,Obligacion,Tarjeta de Credito,Pago cuota tarjeta (fecha límite),850.00,PEN,Banca por Internet,1,2026-10-20,Pendiente
 6,2026-09-24,Ingreso,Dividendos,Dividendos extranjeros,120.00,USD,Cuenta Broker,0,,
-7,2026-09-26,Obligacion,Servicios,Fibra óptica internet,130.00,PEN,Transferencia,1,2026-10-12,Pendiente
-8,2026-09-28,Gasto,Transporte,Combustible vehicular,190.00,PEN,Tarjeta Crédito,0,,
-9,2026-09-29,Inversion,Renta Fija / Bonos,Depósito a plazo / Bonos,1200.00,PEN,Transferencia,0,,
