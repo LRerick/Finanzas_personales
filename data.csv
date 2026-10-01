@@ -1,0 +1,8 @@
+id,fecha,tipo,categoria,descripcion,monto,moneda,metodo_pago
+1,2026-09-01,Ingreso,Salario,Abono mensual nómina,5200.00,PEN,Transferencia
+2,2026-09-04,Gasto,Alimentacion,Supermercado quincenal,480.00,PEN,Tarjeta Débito
+3,2026-09-10,Inversion,Fondos Mutuos,Aporte portafolio indexado,950.00,PEN,Transferencia
+4,2026-09-15,Gasto,Servicios,Luz agua e internet,240.50,PEN,Débito Automático
+5,2026-09-20,Gasto,Transporte,Combustible vehicular,190.00,PEN,Tarjeta Crédito
+6,2026-09-25,Ingreso,Dividendos,Distribución trimestral acciones,175.80,PEN,Cuenta Broker
+7,2026-09-29,Inversion,Renta Fija,Depósito a plazo / Bonos,600.00,PEN,Transferencia
