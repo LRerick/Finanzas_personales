@@ -1,51 +1,91 @@
 let transactions = [];
-const CSV_FILE = 'data.csv';
+let fixedExpenses = [];
+
+const CSV_TX_FILE = 'data.csv';
+const CSV_FIJOS_FILE = 'gastos_fijos.csv';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicialización de fechas
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('fecha').value = today;
+  // Inicializar fecha actual
+  const todayStr = new Date().toISOString().split('T')[0];
+  document.getElementById('fecha').value = todayStr;
 
-  // Manejo de visibilidad del vencimiento según el tipo de operación
+  setupTabs();
+  setupListeners();
+  loadAllData();
+});
+
+// 1. Manejo de Pestañas
+function setupTabs() {
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      btn.classList.add('active');
+      const targetId = btn.getAttribute('data-tab');
+      document.getElementById(targetId).classList.add('active');
+    });
+  });
+
+  // Mostrar campo vencimiento sólo si es Obligación
   const tipoSelect = document.getElementById('tipo');
-  const vencimientoField = document.getElementById('vencimientoField');
-  
+  const vencField = document.getElementById('vencimientoField');
   tipoSelect.addEventListener('change', () => {
     if (tipoSelect.value === 'Obligacion') {
-      vencimientoField.style.display = 'flex';
+      vencField.style.display = 'flex';
       document.getElementById('fecha_vencimiento').required = true;
     } else {
-      vencimientoField.style.display = 'none';
+      vencField.style.display = 'none';
       document.getElementById('fecha_vencimiento').required = false;
     }
   });
-
-  loadDataCSV();
-  initListeners();
-});
-
-// Carga del CSV
-async function loadDataCSV() {
-  try {
-    const res = await fetch(CSV_FILE);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const csvData = await res.text();
-    processCSV(csvData);
-  } catch (e) {
-    console.warn('Carga directa vía fetch no completada. Usa el botón "Importar CSV".');
-  }
 }
 
-function initListeners() {
+// 2. Configurar Listeners
+function setupListeners() {
   document.getElementById('txForm').addEventListener('submit', handleAddTransaction);
+  document.getElementById('fijosForm').addEventListener('submit', handleAddFixedExpense);
   document.getElementById('csvFileInput').addEventListener('change', handleImportCSV);
   document.getElementById('btnExport').addEventListener('click', handleExportCSV);
+  document.getElementById('btnExportFijos').addEventListener('click', handleExportFijosCSV);
+  document.getElementById('btnSyncFijos').addEventListener('click', () => {
+    autoGenerateMonthlyCommitments();
+    updateUI();
+  });
   document.getElementById('filterTipo').addEventListener('change', updateUI);
   document.getElementById('filterMoneda').addEventListener('change', updateUI);
 }
 
-// Parser adaptado a las columnas extendidas
-function processCSV(text) {
+// 3. Cargar ambos archivos CSV
+async function loadAllData() {
+  try {
+    const resTx = await fetch(CSV_TX_FILE);
+    if (resTx.ok) {
+      const textTx = await resTx.text();
+      parseTxCSV(textTx);
+    }
+  } catch (e) {
+    console.warn('data.csv no cargado directamente por fetch.');
+  }
+
+  try {
+    const resFijos = await fetch(CSV_FIJOS_FILE);
+    if (resFijos.ok) {
+      const textFijos = await resFijos.text();
+      parseFijosCSV(textFijos);
+    }
+  } catch (e) {
+    console.warn('gastos_fijos.csv no cargado directamente por fetch.');
+  }
+
+  // Generar automáticamente las obligaciones del mes basándose en los gastos fijos
+  autoGenerateMonthlyCommitments();
+  updateUI();
+}
+
+// Parser de data.csv
+function parseTxCSV(text) {
   const lines = text.trim().split('\n');
   if (lines.length <= 1) return;
 
@@ -53,7 +93,6 @@ function processCSV(text) {
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-
     const cols = line.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
     if (cols.length >= 7) {
       parsed.push({
@@ -71,15 +110,74 @@ function processCSV(text) {
       });
     }
   }
-
   transactions = parsed;
-  updateUI();
 }
 
-// Agregar nueva operación
+// Parser de gastos_fijos.csv
+function parseFijosCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length <= 1) return;
+
+  const parsed = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols = line.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+    if (cols.length >= 6) {
+      parsed.push({
+        id: parseInt(cols[0], 10),
+        dia_mes: parseInt(cols[1], 10),
+        categoria: cols[2],
+        descripcion: cols[3],
+        monto: parseFloat(cols[4]) || 0,
+        moneda: cols[5] || 'PEN',
+        metodo_pago: cols[6] || 'Débito Automático',
+        activo: cols[7] !== undefined ? parseInt(cols[7], 10) === 1 : true
+      });
+    }
+  }
+  fixedExpenses = parsed;
+}
+
+// 4. GENERACIÓN AUTOMÁTICA DE COMPROMISOS MENSUALES
+function autoGenerateMonthlyCommitments() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+
+  fixedExpenses.filter(f => f.activo).forEach(fijo => {
+    const day = String(fijo.dia_mes).padStart(2, '0');
+    const targetDueDate = `${year}-${month}-${day}`;
+
+    // Validar si ya existe este mes para evitar duplicados
+    const alreadyExists = transactions.some(t => 
+      t.es_obligatorio && 
+      t.fecha_vencimiento === targetDueDate && 
+      t.descripcion.trim().toLowerCase() === fijo.descripcion.trim().toLowerCase()
+    );
+
+    if (!alreadyExists) {
+      const nextId = transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
+      transactions.unshift({
+        id: nextId,
+        fecha: targetDueDate,
+        tipo: 'Obligacion',
+        categoria: fijo.categoria,
+        descripcion: fijo.descripcion,
+        monto: fijo.monto,
+        moneda: fijo.moneda,
+        metodo_pago: fijo.metodo_pago,
+        es_obligatorio: true,
+        fecha_vencimiento: targetDueDate,
+        estado_pago: 'Pendiente'
+      });
+    }
+  });
+}
+
+// 5. Agregar Transacción Puntual (Formulario Pestaña 1)
 function handleAddTransaction(e) {
   e.preventDefault();
-
   const nextId = transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
   const tipo = document.getElementById('tipo').value;
   const esObligacion = tipo === 'Obligacion';
@@ -102,14 +200,35 @@ function handleAddTransaction(e) {
   transactions.unshift(newTx);
   updateUI();
 
-  // Reset del formulario
   document.getElementById('categoria').value = '';
   document.getElementById('descripcion').value = '';
   document.getElementById('monto').value = '';
   document.getElementById('fecha_vencimiento').value = '';
 }
 
-// Alternar estado de pago de una obligación
+// 6. Agregar Gasto Fijo Recurrente (Formulario Pestaña 2)
+function handleAddFixedExpense(e) {
+  e.preventDefault();
+  const nextId = fixedExpenses.length > 0 ? Math.max(...fixedExpenses.map(f => f.id)) + 1 : 1;
+
+  const newFijo = {
+    id: nextId,
+    dia_mes: parseInt(document.getElementById('fijo_dia').value, 10),
+    categoria: document.getElementById('fijo_categoria').value.trim(),
+    descripcion: document.getElementById('fijo_descripcion').value.trim(),
+    monto: parseFloat(document.getElementById('fijo_monto').value),
+    moneda: document.getElementById('fijo_moneda').value,
+    metodo_pago: document.getElementById('fijo_metodo').value,
+    activo: true
+  };
+
+  fixedExpenses.push(newFijo);
+  autoGenerateMonthlyCommitments();
+  updateUI();
+
+  document.getElementById('fijosForm').reset();
+}
+
 function togglePaymentStatus(id) {
   const item = transactions.find(t => t.id === id);
   if (!item) return;
@@ -117,23 +236,29 @@ function togglePaymentStatus(id) {
   updateUI();
 }
 
-// Eliminar registro
 function deleteTransaction(id) {
   transactions = transactions.filter(t => t.id !== id);
   updateUI();
 }
 
-// Importar archivo manual
+function deleteFixedExpense(id) {
+  fixedExpenses = fixedExpenses.filter(f => f.id !== id);
+  updateUI();
+}
+
 function handleImportCSV(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = (event) => processCSV(event.target.result);
+  reader.onload = (event) => {
+    parseTxCSV(event.target.result);
+    autoGenerateMonthlyCommitments();
+    updateUI();
+  };
   reader.readAsText(file, 'UTF-8');
 }
 
-// Exportar CSV
 function handleExportCSV() {
   const headers = ['id', 'fecha', 'tipo', 'categoria', 'descripcion', 'monto', 'moneda', 'metodo_pago', 'es_obligatorio', 'fecha_vencimiento', 'estado_pago'];
   const rows = transactions.map(t => [
@@ -150,15 +275,33 @@ function handleExportCSV() {
     t.estado_pago || ''
   ].join(','));
 
-  const csvContent = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  downloadFile([headers.join(','), ...rows].join('\n'), CSV_TX_FILE);
+}
+
+function handleExportFijosCSV() {
+  const headers = ['id', 'dia_mes', 'categoria', 'descripcion', 'monto', 'moneda', 'metodo_pago', 'activo'];
+  const rows = fixedExpenses.map(f => [
+    f.id,
+    f.dia_mes,
+    `"${f.categoria}"`,
+    `"${f.descripcion}"`,
+    f.monto.toFixed(2),
+    f.moneda,
+    `"${f.metodo_pago}"`,
+    f.activo ? 1 : 0
+  ].join(','));
+
+  downloadFile([headers.join(','), ...rows].join('\n'), CSV_FIJOS_FILE);
+}
+
+function downloadFile(content, fileName) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = CSV_FILE;
+  a.download = fileName;
   a.click();
 }
 
-// Cálculo de días restantes
 function getDaysRemaining(targetDateStr) {
   if (!targetDateStr) return null;
   const today = new Date();
@@ -172,14 +315,14 @@ function getDaysRemaining(targetDateStr) {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
-// Renderizado principal
+// 7. RENDERIZADO GLOBAL
 function updateUI() {
   renderKPIs();
   renderObligations();
   renderTable();
+  renderFixedExpensesTable();
 }
 
-// Render de tarjetas de balance PEN y USD
 function renderKPIs() {
   let ingPen = 0, egPen = 0;
   let ingUsd = 0, egUsd = 0;
@@ -213,7 +356,6 @@ function renderKPIs() {
   netoUsdNode.className = `kpi-num ${netoUsd >= 0 ? 'text-success' : 'text-danger'}`;
 }
 
-// Render de la sección del calendario / obligaciones
 function renderObligations() {
   const container = document.getElementById('obligationsCardsList');
   container.innerHTML = '';
@@ -223,11 +365,10 @@ function renderObligations() {
   document.getElementById('pendientesCountBadge').textContent = `${pendientes.length} Pendiente(s)`;
 
   if (obligations.length === 0) {
-    container.innerHTML = `<p style="color: var(--text-dim); grid-column: 1 / -1;">No hay compromisos u obligaciones fijas registradas.</p>`;
+    container.innerHTML = `<p style="color: var(--text-dim); grid-column: 1 / -1;">No hay compromisos u obligaciones programadas.</p>`;
     return;
   }
 
-  // Ordenar por fecha de vencimiento
   obligations.sort((a, b) => (a.fecha_vencimiento || '').localeCompare(b.fecha_vencimiento || ''));
 
   obligations.forEach(ob => {
@@ -251,12 +392,11 @@ function renderObligations() {
 
     if (isPaid) {
       countdownClass = 'count-green';
-      countdownText = 'Completado';
+      countdownText = 'Pagado';
     }
 
     const urgencyClass = isPaid ? 'pagado' : (daysLeft <= 3 ? 'urgente' : '');
     card.className = `obligation-card ${urgencyClass}`;
-
     const sym = ob.moneda === 'USD' ? '$' : 'S/';
 
     card.innerHTML = `
@@ -269,8 +409,8 @@ function renderObligations() {
       </div>
 
       <div class="ob-details">
-        <span>Vence: <strong>${ob.fecha_vencimiento || 'Sin fecha'}</strong></span>
-        <span>Método: ${ob.metodo_pago}</span>
+        <span>Límite: <strong>${ob.fecha_vencimiento || 'S/F'}</strong></span>
+        <span>${ob.metodo_pago}</span>
       </div>
 
       <div class="ob-footer">
@@ -285,7 +425,6 @@ function renderObligations() {
   });
 }
 
-// Render de la tabla histórica
 function renderTable() {
   const filterTipo = document.getElementById('filterTipo').value;
   const filterMoneda = document.getElementById('filterMoneda').value;
@@ -324,6 +463,30 @@ function renderTable() {
       <td>${estadoDetalle}</td>
       <td>
         <button class="btn-delete" onclick="deleteTransaction(${t.id})">Eliminar</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderFixedExpensesTable() {
+  const tbody = document.getElementById('fijosTableBody');
+  tbody.innerHTML = '';
+
+  fixedExpenses.forEach(f => {
+    const row = document.createElement('tr');
+    const sym = f.moneda === 'USD' ? '$' : 'S/';
+
+    row.innerHTML = `
+      <td>#${f.id}</td>
+      <td>Día <strong>${f.dia_mes}</strong> de cada mes</td>
+      <td>${f.categoria}</td>
+      <td>${f.descripcion}</td>
+      <td><strong>${sym} ${f.monto.toLocaleString(f.moneda === 'USD' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2 })}</strong></td>
+      <td>${f.metodo_pago}</td>
+      <td><span class="tag-badge tag-ingreso">Activo</span></td>
+      <td>
+        <button class="btn-delete" onclick="deleteFixedExpense(${f.id})">Eliminar Regla</button>
       </td>
     `;
     tbody.appendChild(row);
