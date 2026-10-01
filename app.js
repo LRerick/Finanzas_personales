@@ -1,3 +1,6 @@
+const STORAGE_KEY_TX = 'finanzas_data_tx';
+const STORAGE_KEY_FIJOS = 'finanzas_data_fijos';
+
 let transactions = [];
 let fixedExpenses = [];
 
