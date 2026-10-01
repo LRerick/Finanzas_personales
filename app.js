@@ -4,10 +4,14 @@ let fixedExpenses = [];
 const CSV_TX_FILE = 'data.csv';
 const CSV_FIJOS_FILE = 'gastos_fijos.csv';
 
+// Claves de persistencia en el navegador
+const STORAGE_KEY_TX = 'finanzas_data_tx';
+const STORAGE_KEY_FIJOS = 'finanzas_data_fijos';
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicializar fecha actual
   const todayStr = new Date().toISOString().split('T')[0];
-  document.getElementById('fecha').value = todayStr;
+  const dateInput = document.getElementById('fecha');
+  if (dateInput) dateInput.value = todayStr;
 
   setupTabs();
   setupListeners();
@@ -28,18 +32,19 @@ function setupTabs() {
     });
   });
 
-  // Mostrar campo vencimiento sólo si es Obligación
   const tipoSelect = document.getElementById('tipo');
   const vencField = document.getElementById('vencimientoField');
-  tipoSelect.addEventListener('change', () => {
-    if (tipoSelect.value === 'Obligacion') {
-      vencField.style.display = 'flex';
-      document.getElementById('fecha_vencimiento').required = true;
-    } else {
-      vencField.style.display = 'none';
-      document.getElementById('fecha_vencimiento').required = false;
-    }
-  });
+  if (tipoSelect && vencField) {
+    tipoSelect.addEventListener('change', () => {
+      if (tipoSelect.value === 'Obligacion') {
+        vencField.style.display = 'flex';
+        document.getElementById('fecha_vencimiento').required = true;
+      } else {
+        vencField.style.display = 'none';
+        document.getElementById('fecha_vencimiento').required = false;
+      }
+    });
+  }
 }
 
 // 2. Configurar Listeners
@@ -51,37 +56,55 @@ function setupListeners() {
   document.getElementById('btnExportFijos').addEventListener('click', handleExportFijosCSV);
   document.getElementById('btnSyncFijos').addEventListener('click', () => {
     autoGenerateMonthlyCommitments();
+    saveToStorage();
     updateUI();
   });
   document.getElementById('filterTipo').addEventListener('change', updateUI);
   document.getElementById('filterMoneda').addEventListener('change', updateUI);
 }
 
-// 3. Cargar ambos archivos CSV
+// 3. Cargar Datos (Prioriza localStorage; si está vacío, carga desde los CSV)
 async function loadAllData() {
-  try {
-    const resTx = await fetch(CSV_TX_FILE);
-    if (resTx.ok) {
-      const textTx = await resTx.text();
-      parseTxCSV(textTx);
+  const storedTx = localStorage.getItem(STORAGE_KEY_TX);
+  const storedFijos = localStorage.getItem(STORAGE_KEY_FIJOS);
+
+  if (storedTx) {
+    transactions = JSON.parse(storedTx);
+  } else {
+    try {
+      const resTx = await fetch(CSV_TX_FILE);
+      if (resTx.ok) {
+        const textTx = await resTx.text();
+        parseTxCSV(textTx);
+      }
+    } catch (e) {
+      console.warn('data.csv inicial no accesible por fetch.');
     }
-  } catch (e) {
-    console.warn('data.csv no cargado directamente por fetch.');
   }
 
-  try {
-    const resFijos = await fetch(CSV_FIJOS_FILE);
-    if (resFijos.ok) {
-      const textFijos = await resFijos.text();
-      parseFijosCSV(textFijos);
+  if (storedFijos) {
+    fixedExpenses = JSON.parse(storedFijos);
+  } else {
+    try {
+      const resFijos = await fetch(CSV_FIJOS_FILE);
+      if (resFijos.ok) {
+        const textFijos = await resFijos.text();
+        parseFijosCSV(textFijos);
+      }
+    } catch (e) {
+      console.warn('gastos_fijos.csv inicial no accesible por fetch.');
     }
-  } catch (e) {
-    console.warn('gastos_fijos.csv no cargado directamente por fetch.');
   }
 
-  // Generar automáticamente las obligaciones del mes basándose en los gastos fijos
   autoGenerateMonthlyCommitments();
+  saveToStorage();
   updateUI();
+}
+
+// Función central para guardar los datos en memoria permanente
+function saveToStorage() {
+  localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
+  localStorage.setItem(STORAGE_KEY_FIJOS, JSON.stringify(fixedExpenses));
 }
 
 // Parser de data.csv
@@ -139,7 +162,7 @@ function parseFijosCSV(text) {
   fixedExpenses = parsed;
 }
 
-// 4. GENERACIÓN AUTOMÁTICA DE COMPROMISOS MENSUALES
+// Generación recurrente automática
 function autoGenerateMonthlyCommitments() {
   const now = new Date();
   const year = now.getFullYear();
@@ -149,7 +172,6 @@ function autoGenerateMonthlyCommitments() {
     const day = String(fijo.dia_mes).padStart(2, '0');
     const targetDueDate = `${year}-${month}-${day}`;
 
-    // Validar si ya existe este mes para evitar duplicados
     const alreadyExists = transactions.some(t => 
       t.es_obligatorio && 
       t.fecha_vencimiento === targetDueDate && 
@@ -175,7 +197,7 @@ function autoGenerateMonthlyCommitments() {
   });
 }
 
-// 5. Agregar Transacción Puntual (Formulario Pestaña 1)
+// Agregar Transacción Puntual
 function handleAddTransaction(e) {
   e.preventDefault();
   const nextId = transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
@@ -198,6 +220,7 @@ function handleAddTransaction(e) {
   };
 
   transactions.unshift(newTx);
+  saveToStorage(); // Guarda en el navegador
   updateUI();
 
   document.getElementById('categoria').value = '';
@@ -206,7 +229,7 @@ function handleAddTransaction(e) {
   document.getElementById('fecha_vencimiento').value = '';
 }
 
-// 6. Agregar Gasto Fijo Recurrente (Formulario Pestaña 2)
+// Agregar Gasto Fijo
 function handleAddFixedExpense(e) {
   e.preventDefault();
   const nextId = fixedExpenses.length > 0 ? Math.max(...fixedExpenses.map(f => f.id)) + 1 : 1;
@@ -224,6 +247,7 @@ function handleAddFixedExpense(e) {
 
   fixedExpenses.push(newFijo);
   autoGenerateMonthlyCommitments();
+  saveToStorage(); // Guarda en el navegador
   updateUI();
 
   document.getElementById('fijosForm').reset();
@@ -233,16 +257,19 @@ function togglePaymentStatus(id) {
   const item = transactions.find(t => t.id === id);
   if (!item) return;
   item.estado_pago = item.estado_pago === 'Pagado' ? 'Pendiente' : 'Pagado';
+  saveToStorage();
   updateUI();
 }
 
 function deleteTransaction(id) {
   transactions = transactions.filter(t => t.id !== id);
+  saveToStorage();
   updateUI();
 }
 
 function deleteFixedExpense(id) {
   fixedExpenses = fixedExpenses.filter(f => f.id !== id);
+  saveToStorage();
   updateUI();
 }
 
@@ -254,6 +281,7 @@ function handleImportCSV(e) {
   reader.onload = (event) => {
     parseTxCSV(event.target.result);
     autoGenerateMonthlyCommitments();
+    saveToStorage();
     updateUI();
   };
   reader.readAsText(file, 'UTF-8');
@@ -315,7 +343,7 @@ function getDaysRemaining(targetDateStr) {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
-// 7. RENDERIZADO GLOBAL
+// 4. Renderizado
 function updateUI() {
   renderKPIs();
   renderObligations();
