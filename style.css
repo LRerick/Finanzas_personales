@@ -1,1 +1,241 @@
+:root {
+  --bg-main: #090d16;
+  --bg-surface: #131b2e;
+  --bg-input: #0c1220;
+  --border: #232f48;
+  --text-main: #f1f5f9;
+  --text-dim: #8b9bb4;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --success: #10b981;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.source-tag {
+  background: var(--border);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.content-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.kpi-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.kpi-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.kpi-num {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 0.4rem;
+}
+
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-info { color: var(--info); }
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.panel-header {
+  margin-bottom: 1.25rem;
+}
+
+.panel-header.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.form-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.input-field label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+input, select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  padding: 0.65rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.btn {
+  padding: 0.65rem 1.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  width: 100%;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-main);
+}
+
+.btn-outline:hover {
+  background: var(--border);
+}
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: var(--danger);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.styled-table th, .styled-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.styled-table th {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tag-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tag-ingreso { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.tag-gasto { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.tag-inversion { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
