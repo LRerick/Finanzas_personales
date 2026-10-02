@@ -4,21 +4,20 @@ let fixedExpenses = [];
 const CSV_TX_FILE = 'data.csv';
 const CSV_FIJOS_FILE = 'gastos_fijos.csv';
 
-// Claves donde el navegador guardará tus datos
-const STORAGE_KEY_TX = 'finanzas_data_tx';
-const STORAGE_KEY_FIJOS = 'finanzas_data_fijos';
+const STORAGE_KEY_TX = 'finanzas_data_tx_v2';
+const STORAGE_KEY_FIJOS = 'finanzas_data_fijos_v2';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const todayStr = new Date().toISOString().split('T')[0];
   const dateInput = document.getElementById('fecha');
-  if (dateInput) dateInput.value = todayStr;
+  if (dateInput) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
 
   setupTabs();
   setupListeners();
   loadAllData();
 });
 
-// Pestañas
 function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
   tabButtons.forEach(btn => {
@@ -28,7 +27,8 @@ function setupTabs() {
 
       btn.classList.add('active');
       const targetId = btn.getAttribute('data-tab');
-      document.getElementById(targetId).classList.add('active');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) targetEl.classList.add('active');
     });
   });
 
@@ -47,52 +47,66 @@ function setupTabs() {
   }
 }
 
-// Botones y formularios
 function setupListeners() {
-  document.getElementById('txForm').addEventListener('submit', handleAddTransaction);
-  document.getElementById('fijosForm').addEventListener('submit', handleAddFixedExpense);
-  document.getElementById('csvFileInput').addEventListener('change', handleImportCSV);
-  document.getElementById('btnExport').addEventListener('click', handleExportCSV);
-  document.getElementById('btnExportFijos').addEventListener('click', handleExportFijosCSV);
-  document.getElementById('btnSyncFijos').addEventListener('click', () => {
+  const txForm = document.getElementById('txForm');
+  if (txForm) txForm.addEventListener('submit', handleAddTransaction);
+
+  const fijosForm = document.getElementById('fijosForm');
+  if (fijosForm) fijosForm.addEventListener('submit', handleAddFixedExpense);
+
+  const csvInput = document.getElementById('csvFileInput');
+  if (csvInput) csvInput.addEventListener('change', handleImportCSV);
+
+  const btnExp = document.getElementById('btnExport');
+  if (btnExp) btnExp.addEventListener('click', handleExportCSV);
+
+  const btnExpFijos = document.getElementById('btnExportFijos');
+  if (btnExpFijos) btnExpFijos.addEventListener('click', handleExportFijosCSV);
+
+  const btnSync = document.getElementById('btnSyncFijos');
+  if (btnSync) btnSync.addEventListener('click', () => {
     autoGenerateMonthlyCommitments();
     saveToStorage();
     updateUI();
   });
-  document.getElementById('filterTipo').addEventListener('change', updateUI);
-  document.getElementById('filterMoneda').addEventListener('change', updateUI);
+
+  const filterTipo = document.getElementById('filterTipo');
+  if (filterTipo) filterTipo.addEventListener('change', updateUI);
+
+  const filterMoneda = document.getElementById('filterMoneda');
+  if (filterMoneda) filterMoneda.addEventListener('change', updateUI);
 }
 
-// CARGA DE DATOS: Si ya están en el navegador los usa; si no, lee los CSV
+// Carga con prioridad absoluta a la memoria local del celular
 async function loadAllData() {
   const storedTx = localStorage.getItem(STORAGE_KEY_TX);
   const storedFijos = localStorage.getItem(STORAGE_KEY_FIJOS);
 
-  if (storedTx) {
+  if (storedTx && storedTx !== '[]') {
     transactions = JSON.parse(storedTx);
   } else {
     try {
-      const resTx = await fetch(CSV_TX_FILE);
+      const resTx = await fetch(CSV_TX_FILE + '?nocache=' + Date.now());
       if (resTx.ok) {
         const textTx = await resTx.text();
         parseTxCSV(textTx);
       }
     } catch (e) {
-      console.warn('No se cargó data.csv inicial');
+      console.warn('data.csv no cargado vía fetch');
     }
   }
 
-  if (storedFijos) {
+  if (storedFijos && storedFijos !== '[]') {
     fixedExpenses = JSON.parse(storedFijos);
   } else {
     try {
-      const resFijos = await fetch(CSV_FIJOS_FILE);
+      const resFijos = await fetch(CSV_FIJOS_FILE + '?nocache=' + Date.now());
       if (resFijos.ok) {
         const textFijos = await resFijos.text();
         parseFijosCSV(textFijos);
       }
     } catch (e) {
-      console.warn('No se cargó gastos_fijos.csv inicial');
+      console.warn('gastos_fijos.csv no cargado vía fetch');
     }
   }
 
@@ -101,13 +115,15 @@ async function loadAllData() {
   updateUI();
 }
 
-// GUARDA EN EL NAVEGADOR
 function saveToStorage() {
-  localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
-  localStorage.setItem(STORAGE_KEY_FIJOS, JSON.stringify(fixedExpenses));
+  try {
+    localStorage.setItem(STORAGE_KEY_TX, JSON.stringify(transactions));
+    localStorage.setItem(STORAGE_KEY_FIJOS, JSON.stringify(fixedExpenses));
+  } catch (err) {
+    console.error('Error al guardar en el almacenamiento local del celular', err);
+  }
 }
 
-// Parser data.csv
 function parseTxCSV(text) {
   const lines = text.trim().split('\n');
   if (lines.length <= 1) return;
@@ -136,7 +152,6 @@ function parseTxCSV(text) {
   transactions = parsed;
 }
 
-// Parser gastos_fijos.csv
 function parseFijosCSV(text) {
   const lines = text.trim().split('\n');
   if (lines.length <= 1) return;
@@ -162,7 +177,6 @@ function parseFijosCSV(text) {
   fixedExpenses = parsed;
 }
 
-// Generación recurrente mensual
 function autoGenerateMonthlyCommitments() {
   const now = new Date();
   const year = now.getFullYear();
@@ -197,7 +211,6 @@ function autoGenerateMonthlyCommitments() {
   });
 }
 
-// Agregar Transacción
 function handleAddTransaction(e) {
   e.preventDefault();
   const nextId = transactions.length > 0 ? Math.max(...transactions.map(t => t.id)) + 1 : 1;
@@ -220,16 +233,17 @@ function handleAddTransaction(e) {
   };
 
   transactions.unshift(newTx);
-  saveToStorage(); // <-- Guarda de inmediato
+  saveToStorage();
   updateUI();
 
   document.getElementById('categoria').value = '';
   document.getElementById('descripcion').value = '';
   document.getElementById('monto').value = '';
-  document.getElementById('fecha_vencimiento').value = '';
+  if (document.getElementById('fecha_vencimiento')) {
+    document.getElementById('fecha_vencimiento').value = '';
+  }
 }
 
-// Agregar Gasto Fijo
 function handleAddFixedExpense(e) {
   e.preventDefault();
   const nextId = fixedExpenses.length > 0 ? Math.max(...fixedExpenses.map(f => f.id)) + 1 : 1;
@@ -247,7 +261,7 @@ function handleAddFixedExpense(e) {
 
   fixedExpenses.push(newFijo);
   autoGenerateMonthlyCommitments();
-  saveToStorage(); // <-- Guarda de inmediato
+  saveToStorage();
   updateUI();
 
   document.getElementById('fijosForm').reset();
@@ -257,19 +271,19 @@ function togglePaymentStatus(id) {
   const item = transactions.find(t => t.id === id);
   if (!item) return;
   item.estado_pago = item.estado_pago === 'Pagado' ? 'Pendiente' : 'Pagado';
-  saveToStorage(); // <-- Guarda el cambio de estado
+  saveToStorage();
   updateUI();
 }
 
 function deleteTransaction(id) {
   transactions = transactions.filter(t => t.id !== id);
-  saveToStorage(); // <-- Guarda la eliminación
+  saveToStorage();
   updateUI();
 }
 
 function deleteFixedExpense(id) {
   fixedExpenses = fixedExpenses.filter(f => f.id !== id);
-  saveToStorage(); // <-- Guarda la eliminación
+  saveToStorage();
   updateUI();
 }
 
@@ -368,28 +382,40 @@ function renderKPIs() {
   const netoPen = ingPen - egPen;
   const netoUsd = ingUsd - egUsd;
 
-  document.getElementById('kpiIngresosPen').textContent = `S/ ${ingPen.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-  document.getElementById('kpiEgresosPen').textContent = `S/ ${egPen.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+  const kpiIngPen = document.getElementById('kpiIngresosPen');
+  if (kpiIngPen) kpiIngPen.textContent = `S/ ${ingPen.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+
+  const kpiEgPen = document.getElementById('kpiEgresosPen');
+  if (kpiEgPen) kpiEgPen.textContent = `S/ ${egPen.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
   
   const netoPenNode = document.getElementById('kpiNetoPen');
-  netoPenNode.textContent = `S/ ${netoPen.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
-  netoPenNode.className = `kpi-num ${netoPen >= 0 ? 'text-success' : 'text-danger'}`;
+  if (netoPenNode) {
+    netoPenNode.textContent = `S/ ${netoPen.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+    netoPenNode.className = `kpi-num ${netoPen >= 0 ? 'text-success' : 'text-danger'}`;
+  }
 
-  document.getElementById('kpiIngresosUsd').textContent = `$ ${ingUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-  document.getElementById('kpiEgresosUsd').textContent = `$ ${egUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  const kpiIngUsd = document.getElementById('kpiIngresosUsd');
+  if (kpiIngUsd) kpiIngUsd.textContent = `$ ${ingUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+  const kpiEgUsd = document.getElementById('kpiEgresosUsd');
+  if (kpiEgUsd) kpiEgUsd.textContent = `$ ${egUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   
   const netoUsdNode = document.getElementById('kpiNetoUsd');
-  netoUsdNode.textContent = `$ ${netoUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-  netoUsdNode.className = `kpi-num ${netoUsd >= 0 ? 'text-success' : 'text-danger'}`;
+  if (netoUsdNode) {
+    netoUsdNode.textContent = `$ ${netoUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    netoUsdNode.className = `kpi-num ${netoUsd >= 0 ? 'text-success' : 'text-danger'}`;
+  }
 }
 
 function renderObligations() {
   const container = document.getElementById('obligationsCardsList');
+  if (!container) return;
   container.innerHTML = '';
 
   const obligations = transactions.filter(t => t.es_obligatorio || t.tipo === 'Obligacion');
   const pendientes = obligations.filter(t => t.estado_pago === 'Pendiente');
-  document.getElementById('pendientesCountBadge').textContent = `${pendientes.length} Pendiente(s)`;
+  const badge = document.getElementById('pendientesCountBadge');
+  if (badge) badge.textContent = `${pendientes.length} Pendiente(s)`;
 
   if (obligations.length === 0) {
     container.innerHTML = `<p style="color: var(--text-dim); grid-column: 1 / -1;">No hay compromisos u obligaciones programadas.</p>`;
@@ -408,13 +434,13 @@ function renderObligations() {
 
     if (daysLeft < 0) {
       countdownClass = 'count-red';
-      countdownText = `Venció hace ${Math.abs(daysLeft)} días`;
+      countdownText = `Venció hace ${Math.abs(daysLeft)} d`;
     } else if (daysLeft === 0) {
       countdownClass = 'count-red';
       countdownText = '¡Vence Hoy!';
     } else if (daysLeft <= 4) {
       countdownClass = 'count-yellow';
-      countdownText = `Vence en ${daysLeft} días`;
+      countdownText = `Vence en ${daysLeft} d`;
     }
 
     if (isPaid) {
@@ -443,7 +469,7 @@ function renderObligations() {
       <div class="ob-footer">
         <span class="ob-amount">${sym} ${ob.monto.toLocaleString(ob.moneda === 'USD' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2 })}</span>
         <button class="btn-toggle-pay" onclick="togglePaymentStatus(${ob.id})">
-          ${isPaid ? 'Marcar Pendiente' : 'Marcar Pagado'}
+          ${isPaid ? 'Pendiente' : 'Marcar Pagado'}
         </button>
       </div>
     `;
@@ -453,9 +479,10 @@ function renderObligations() {
 }
 
 function renderTable() {
-  const filterTipo = document.getElementById('filterTipo').value;
-  const filterMoneda = document.getElementById('filterMoneda').value;
+  const filterTipo = document.getElementById('filterTipo') ? document.getElementById('filterTipo').value : 'Todos';
+  const filterMoneda = document.getElementById('filterMoneda') ? document.getElementById('filterMoneda').value : 'Todos';
   const tbody = document.getElementById('txTableBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   const filtered = transactions.filter(t => {
@@ -485,11 +512,11 @@ function renderTable() {
       <td><span class="tag-badge ${badgeClass}">${t.tipo}</span></td>
       <td>${t.categoria}</td>
       <td>${t.descripcion}</td>
-      <td><strong>${sym} ${t.monto.toLocaleString(t.moneda === 'USD' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2 })}</strong> <small style="color:var(--text-dim);">${t.moneda}</small></td>
+      <td><strong>${sym} ${t.monto.toLocaleString(t.moneda === 'USD' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2 })}</strong></td>
       <td>${t.metodo_pago}</td>
       <td>${estadoDetalle}</td>
       <td>
-        <button class="btn-delete" onclick="deleteTransaction(${t.id})">Eliminar</button>
+        <button class="btn-delete" onclick="deleteTransaction(${t.id})">Borrar</button>
       </td>
     `;
     tbody.appendChild(row);
@@ -498,6 +525,7 @@ function renderTable() {
 
 function renderFixedExpensesTable() {
   const tbody = document.getElementById('fijosTableBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   fixedExpenses.forEach(f => {
@@ -506,14 +534,14 @@ function renderFixedExpensesTable() {
 
     row.innerHTML = `
       <td>#${f.id}</td>
-      <td>Día <strong>${f.dia_mes}</strong> de cada mes</td>
+      <td>Día <strong>${f.dia_mes}</strong></td>
       <td>${f.categoria}</td>
       <td>${f.descripcion}</td>
       <td><strong>${sym} ${f.monto.toLocaleString(f.moneda === 'USD' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2 })}</strong></td>
       <td>${f.metodo_pago}</td>
       <td><span class="tag-badge tag-ingreso">Activo</span></td>
       <td>
-        <button class="btn-delete" onclick="deleteFixedExpense(${f.id})">Eliminar Regla</button>
+        <button class="btn-delete" onclick="deleteFixedExpense(${f.id})">Borrar</button>
       </td>
     `;
     tbody.appendChild(row);
